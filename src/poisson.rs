@@ -129,7 +129,6 @@ fn main() {
             r = r1;
         } else{
             l = r1;
-            r = INF;
         }
     }
     
