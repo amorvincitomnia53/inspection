@@ -30,3 +30,7 @@ path = "src/poisson.rs"
 [[bin]]
 name = "optimal_analysis"
 path = "src/optimal_analysis.rs"
+
+[[bin]]
+name = "optimal"
+path = "src/optimal.rs"

@@ -99,9 +99,6 @@ macro_rules! read_value {
 
 
 fn arg<T: FromStr>(i: usize) -> Result<T, Box<dyn Error>> where <T as FromStr>::Err: std::error::Error + 'static {
-    // let args: Vec<String> = env::args().collect();
-    // let argstr = |i| if args.len() > i {Ok(&args[i])} else {Err("No arg")};
-    // return Ok(argstr(i)?.parse::<T>()?);
     return Ok(env::args().nth(i).ok_or("No arg")?.parse::<T>()?);
 }
 
