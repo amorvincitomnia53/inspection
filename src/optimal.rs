@@ -84,48 +84,57 @@ macro_rules! read_value {
 }
 
 
-fn golden_minimize_int_by<F, T, C>(f: F, l_: i32, r_: i32, cmp: C) -> (i32, T) 
+fn find_fib_after(n: i32) -> (i32, i32){
+    if n <= 3 {return (n-1, n);}
+    let mut s = (3,5);
+    loop{
+        if s.1 >= n {return s;}
+        s = (s.1, s.0+s.1);
+    }
+
+}
+fn fibonacci_minimize_by<F, T, C>(f: F, l_: i32, r_: i32, cmp_: C) -> (i32, T) 
 		where F: Fn(i32) -> T, C: Fn(&T, &T)->std::cmp::Ordering, T: Clone
 {
-
+    use std::cmp::Ordering;
     assert!(r_ >= l_);
-    
-    let mut l = (l_, f(l_));
-    if r_ == l_ {return l};
-    let mut r = (r_, f(r_));
 
-    const PHI: f64 = 1.618033988749895;
+    let ev = |x: i32| -> (i32, Option<T>) {assert!( x >= l_);if x > r_ {(x, None)} else {(x, Some(f(x)))}};
+    let cmp = |xv0: &(i32, Option<T>), xv1: &(i32, Option<T>)| {
+        match (xv0, xv1) {
+            ((_, Some(a)), (_, Some(b))) => cmp_(&a, &b),
+            ((_, Some(_)), (_, None)) => Ordering::Less,
+            ((_, None), (_, Some(_))) => Ordering::Greater,
+            ((a, None), (b, None)) => a.cmp(&b)
+        }
+    };
 
-    let getl = |a, b| {let x=a + ((b-a) as f64 / (PHI + 1.0)).ceil() as i32; (x, f(x))};
-    let getr = |a, b| {let x=b - ((b-a) as f64 / (PHI + 1.0)).ceil() as i32; (x, f(x))};
-    let mut ml = getl(l.0, r.0);
-    let mut mr = getr(l.0, r.0);
+    // eprintln!("============");
+
+    let mut l = ev(l_);
+    if r_ == l_ {return (l.0, l.1.unwrap())};
+    let (f0, f1): (i32, i32) = find_fib_after(r_ - l_);
+    let mut r = ev(l_ + f1);
+    let mut mr = ev(l_ + f0);
+    let mut ml = ev(l_ + f1 - f0);
+    // eprintln!("{} {} {} {}", l.0, ml.0, mr.0, r.0);
     while r.0 - l.0 >= 4 {
-        // eprintln!("{} {} {} {}", l.0, ml.0, mr.0, r.0);
-        if cmp(&ml.1, &mr.1) == std::cmp::Ordering::Less {
+        if cmp(&ml, &mr) == std::cmp::Ordering::Less {
             r = mr;
             mr = ml;
-            ml = getr(l.0, mr.0);
+            ml = ev(l.0 + r.0 - mr.0);
         } else{
             l = ml;
             ml = mr;
-            mr = getl(ml.0, r.0);
+            mr = ev(l.0 + r.0 - ml.0);
         }
+        // eprintln!("{} {} {} {}", l.0, ml.0, mr.0, r.0);
     }
-    let mut val: [Option<T>; 4] = [None, None, None, None];
-    let l0 = l.0;
-    let sz = r.0 - l.0 + 1;
-    val[0] = Some(l.1);
-    val[(ml.0 - l.0) as usize] = Some(ml.1);
-    val[(mr.0 - l.0) as usize] = Some(mr.1);
-    val[(r.0 - l.0) as usize] = Some(r.1);
-
-    val.iter()
-        .take((sz) as usize)
-        .enumerate()
-        .map(|(i,x)| (l0 + i as i32, x.clone().unwrap_or_else(||f(l0 + i as i32))))
-        .min_by(|(_, x0), (_, x1)|cmp(x0, x1))
-        .unwrap()
+    let lst = [l, ml, mr, r];
+    let (a, b) = lst.iter()
+                    .min_by(|x, y|cmp(*x, *y))
+                    .unwrap();
+    return (*a, b.clone().unwrap())          
 }
 fn analyze(p: f64) -> (f64, i32, f64, f64, Vec<(i32, f64, f64)>){
     let mut ret = Vec::new();
@@ -144,7 +153,7 @@ fn analyze(p: f64) -> (f64, i32, f64, f64, Vec<(i32, f64, f64)>){
             (c, a)
         };
         let cmp = |(c0, a0): &_, (c1, a1): &_| ((c0 / a0) as f64).partial_cmp(&(c1 / a1)).unwrap();
-        let (j, (c, a)) = golden_minimize_int_by(f, 1, i as i32 - 1, cmp);
+        let (j, (c, a)) = fibonacci_minimize_by(f, 1, i as i32 - 1, cmp);
         
         let pi = 1.0 - (1.0 - p).powi(i as i32);
         let c_inf = c + 1.0 / pi;
